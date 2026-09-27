@@ -13,7 +13,7 @@ PROFILE="$HOME/.config/mozilla/firefox/zgl8zg5n.default"
 BACKUP_DIR="$HOME/main/self/firefox-sessions-backups"
 ```
 
-##### HOW TO USE
+##### HOW TO USE `Linux'
 *dependencies:* `fzf`, `python`
 
 1. make file executable
