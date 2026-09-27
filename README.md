@@ -2,11 +2,11 @@
 script to save list of your previous firefox sessions
 
 ##### BEFORE USE
-check name of your profile: `about:profiles`
+check name of your current profile: `about:profiles`
 
 0. specify folders in `firefox-session`:
 ```bash
-# path to your firefox profile
+# path to current profile
 PROFILE="$HOME/.config/mozilla/firefox/zgl8zg5n.default"
 
 # path to backups folder
