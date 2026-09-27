@@ -2,7 +2,6 @@
 script to save list of your previous firefox sessions
 
 ##### BEFORE USE
-you should check firefox settings
 check name of your profile: about:profiles
 
 0. specify folders:
