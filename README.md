@@ -1,7 +1,7 @@
 ## FOXES
 a script for saving and managing previous Firefox sessions
 
-##### BEFORE USE
+#### BEFORE USE
 check the name of your current Firefox profile at `about:profiles`
 
 0. specify directories in `firefox-session`:
@@ -13,7 +13,7 @@ PROFILE="$HOME/.config/mozilla/firefox/zgl8zg5n.default"
 BACKUP_DIR="$HOME/main/self/firefox-sessions-backups"
 ```
 
-##### HOW TO USE `[ Linux ]`
+#### HOW TO USE `[ Linux ]`
 *dependencies:* `fzf`, `python`
 
 1. make the script executable
