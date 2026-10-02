@@ -2,296 +2,46 @@
 
 set -euo pipefail
 
-# config
-PROFILE="$HOME/.config/mozilla/firefox/zgl8zg5n.default"
-BACKUP_DIR="$HOME/main/self/firefox-sessions-backups"
-SESSION_BACKUPS="$PROFILE/sessionstore-backups"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-MAX_DISPLAY=10
+source "$SCRIPT_DIR/lib/config.sh"
+source "$SCRIPT_DIR/lib/utils.sh"
+source "$SCRIPT_DIR/lib/session-info.sh"
+source "$SCRIPT_DIR/lib/save.sh"
+source "$SCRIPT_DIR/lib/restore.sh"
+source "$SCRIPT_DIR/lib/list.sh"
 
-# check dependencies
-require_command() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    echo "required command not found: $1"
-    exit 1
-  fi
-}
+require_dependencies
 
-require_command fzf
-require_command python
-
-
-# saving session
-save_session() {
-  if [[ ! -d "$SESSION_BACKUPS" ]]; then
-    echo "firefox sessionstore-backups folder not found:"
-    echo "$SESSION_BACKUPS"
-    exit 1
-  fi
-
-  if ! pgrep -x "firefox" >/dev/null; then
-      echo "firefox is currently closed."
-      echo "open firefox before saving a session."
-      exit 1
-  fi
-
-  mkdir -p "$BACKUP_DIR"
-
-  local timestamp
-  timestamp=$(date +"%d-%m-%Y_%H-%M")
-
-  local destination
-  destination="$BACKUP_DIR/${timestamp}_session"
-
-  cp -a "$SESSION_BACKUPS" "$destination"
-
-  echo "session backup created:"
-  echo "$destination"
-
-  show_session_info "$destination"
-
-}
-
-
-# show session information
-get_session_info() {
-  local backup_dir="$1"
-
-  local recovery_file="$backup_dir/recovery.jsonlz4"
-
-  if [[ ! -f "$recovery_file" ]]; then
-      echo "0 windows, 0 tabs"
-      return
-  fi
-
-  python - "$recovery_file" <<'PY'
-import sys
-import json
-
-from pathlib import Path
-
-try:
-    import lz4.block
-except ImportError:
-    print("0 windows, 0 tabs")
-    sys.exit(0)
-
-
-path = Path(sys.argv[1])
-
-try:
-    data = path.read_bytes()
-
-    # Mozilla JSONLZ4 header:
-    # b"mozLz40\0"
-    if not data.startswith(b"mozLz40\0"):
-        print("0 windows, 0 tabs")
-        sys.exit(0)
-
-    compressed = data[8:]
-
-    decompressed = lz4.block.decompress(compressed)
-
-    session = json.loads(decompressed)
-
-    windows = session.get("windows", [])
-
-    window_count = len(windows)
-
-    tab_count = 0
-
-    for window in windows:
-        tabs = window.get("tabs", [])
-        tab_count += len(tabs)
-
-    print(f"{window_count} windows, {tab_count} tabs")
-
-except Exception:
-    print("unknown windows, unknown tabs")
-PY
-}
-
-
-show_session_info() {
-  local backup_dir="$1"
-
-  local name
-  name=$(basename "$backup_dir")
-
-  local info
-  info=$(get_session_info "$backup_dir")
-
-  echo "$name | $info"
-}
-
-
-
-# get backups from newest
-get_backups() {
-  find "$BACKUP_DIR" \
-    -mindepth 1 \
-    -maxdepth 1 \
-    -type d \
-    -name "*_session" \
-    -printf "%T@ %p\n" |
-  sort -rn |
-  cut -d' ' -f2-
-}
-
-
-# session selection
-select_session() {
-  mapfile -t backups < <(get_backups)
-
-  if [[ ${#backups[@]} -eq 0 ]]; then
-      echo "no saved sessions"
-      exit 0
-  fi
-
-  local entries=()
-  local index=1
-
-  for backup in "${backups[@]:0:$MAX_DISPLAY}"; do
-      local name
-      name=$(basename "$backup")
-
-      local info
-      info=$(get_session_info "$backup")
-
-      entries+=("$index) $name | $info")
-
-      ((index++))
-  done
-
-  selected=$(
-      printf '%s\n' "${entries[@]}" |
-      fzf \
-          --height=50% \
-          --layout=reverse \
-          --border \
-          --prompt="firefox session > " \
-          --header="select session with arrows, enter to restore, esc to cancel"
-  ) || exit 0
-
-  local selected_index
-  selected_index=$(echo "$selected" | cut -d')' -f1)
-
-  restore_session "$selected_index"
-}
-
-
-restore_session() {
-  local number="$1"
-
-  mapfile -t backups < <(get_backups)
-
-  if [[ ${#backups[@]} -eq 0 ]]; then
-    echo "no saved sessions"
-    exit 1
-  fi
-
-  if ! [[ "$number" =~ ^[0-9]+$ ]]; then
-    echo "invalid session number"
-    exit 1
-  fi
-
-  if (( number < 1 || number > ${#backups[@]} )); then
-    echo "session number out of range"
-    echo "availible sessions: 1-${#backups[@]}"
-    exit 1
-  fi
-
-  local selected="${backups[$((number - 1))]}"
-
-  echo "selected session:"
-  show_session_info "$selected"
-  echo
-
-  if pgrep -x firefox >/dev/null; then
-      echo "firefox is currently running."
-      echo "close Firefox before restoring a session."
-      exit 1
-  fi
-
-  # backup current sessionstore-backups before replacing it
-  # if [[ -d "$SESSION_BACKUPS" ]]; then
-  #     local safety_timestamp
-  #     safety_timestamp=$(date +"%d-%m-%Y_%H-%M")
-
-  #     cp -a "$SESSION_BACKUPS" \
-  #         "$BACKUP_DIR/${safety_timestamp}_before-restore_sessionstore-backups"
-  # fi
-
-  rm -rf "$SESSION_BACKUPS"
-  rm "$PROFILE/sessionstore.jsonlz4"
-  rm "$PROFILE/sessionCheckpoints.json"
-
-  cp -a "$selected" "$SESSION_BACKUPS"
-
-  echo "session restored."
-  echo "start Firefox normally."
-
-}
-
-
-# listing sessions
-list_sessions() {
-  mapfile -t backups < <(get_backups)
-
-  if [[ ${#backups[@]} -eq 0 ]]; then
-    echo "no saved Firefox sessions."
-    exit 0
-  fi
-
-  local index=1
-
-  for backup in "${backups[@]:0:$MAX_DISPLAY}"; do
-    printf "%2d) " "$index"
-    show_session_info "$backup"
-
-    ((index++))
-  done
-}
-
-
-# CLI
 mkdir -p "$BACKUP_DIR"
 
 case "${1:-}" in
-
   save)
-    save_session
+    save_session "${2:-}"
     ;;
-
   list)
     list_sessions
     ;;
-
   restore)
     if [[ "${2:-}" != "-n" ]]; then
       echo "usage: firefox-session restore -n NUMBER"
       exit 1
     fi
-
     restore_session "${3:-}"
     ;;
-
   -n|--number)
     restore_session "${2:-}"
     ;;
-
   "")
     select_session
     ;;
-
   *)
     echo "usage:"
-    echo "  firefox-session save"
-    echo "  firefox-session"
-    echo "  firefox-session list"
-    echo "  firefox-session -n NUMBER"
-    echo "  firefox-session restore -n NUMBER"
+    echo "  firefox-session save [session-name]  # сохранить (с названием)"
+    echo "  firefox-session                      # интерактивный выбор"
+    echo "  firefox-session list                 # список сессий"
+    echo "  firefox-session -n NUMBER            # восстановить по номеру"
+    echo "  firefox-session restore -n NUMBER    # восстановить по номеру"
     exit 1
     ;;
-
 esac
