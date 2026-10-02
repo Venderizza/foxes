@@ -4,7 +4,7 @@ a script for saving and managing previous Firefox sessions
 #### BEFORE USE
 check the name of your current Firefox profile at `about:profiles`
 
-0. specify directories in `firefox-session`:
+0. specify directories in `lib/config.sh`:
 ```bash
 # path to the current Firefox profile
 PROFILE="$HOME/.config/mozilla/firefox/zgl8zg5n.default"
