@@ -1,5 +1,5 @@
 ## FOXES
-a script for saving and managing previous Firefox sessions
+a script for saving and managing previous Fire**fox** s**es**sions
 
 #### BEFORE USE
 check the name of your current Firefox profile at `about:profiles`
