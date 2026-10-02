@@ -23,7 +23,7 @@ save_session() {
   local destination
   
   if [[ -n "$session_name" ]]; then
-    destination="$BACKUP_DIR/${timestamp}_${session_name}"
+    destination="$BACKUP_DIR/${session_name}"
   else
     destination="$BACKUP_DIR/${timestamp}_session"
   fi

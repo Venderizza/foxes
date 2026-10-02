@@ -6,7 +6,7 @@ get_backups() {
     -mindepth 1 \
     -maxdepth 1 \
     -type d \
-    -name "*_*" \
+    -name "*" \
     -printf "%T@ %p\n" |
   sort -rn |
   cut -d' ' -f2-
@@ -19,19 +19,35 @@ select_session() {
     echo "no saved sessions"
     exit 0
   fi
-  
-  local entries=()
-  local index=1
-  
+
+  local -a names=()
+  local -a infos=()
+  local backup name info
+  local info_width=0
+
   for backup in "${backups[@]:0:$MAX_DISPLAY}"; do
-    local name
     name=$(basename "$backup")
-    local info
     info=$(get_session_info "$backup")
-    entries+=("$index) $name | $info")
+
+    names+=("$name")
+    infos+=("$info")
+
+    if (( ${#info} > info_width )); then
+      info_width=${#info}
+    fi
+  done
+
+  local -a entries=()
+  local index=1
+  local i
+  for (( i = 0; i < ${#infos[@]}; i++ )); do
+    entries+=(
+      "$(printf '%2d) %-*s | %s' \
+        "$index" "$info_width" "${infos[i]}" "${names[i]}")"
+    )
     ((index++))
   done
-  
+    
   selected=$(
     printf '%s\n' "${entries[@]}" |
     fzf \

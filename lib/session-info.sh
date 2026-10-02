@@ -22,7 +22,7 @@ except ImportError:
     print("0 windows, 0 tabs")
     sys.exit(0)
 
-path = Path(sys.argv[1])  # sys.argv[1] — первый аргумент командной строки
+path = Path(sys.argv[1])
 try:
     data = path.read_bytes()
     # Mozilla JSONLZ4 header: b"mozLz40\0"
@@ -30,7 +30,7 @@ try:
         print("0 windows, 0 tabs")
         sys.exit(0)
     
-    compressed = data[8:]  # отрезаем первые 8 байт (заголовок)
+    compressed = data[8:]
     decompressed = lz4.block.decompress(compressed)
     session = json.loads(decompressed)
     
@@ -54,5 +54,5 @@ show_session_info() {
   
   info=$(get_session_info "$backup_dir")
   
-  echo "$name | $info"
+  echo "$info | $name"
 }
