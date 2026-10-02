@@ -59,7 +59,7 @@ select_session() {
   ) || exit 0
   
   local selected_index
-  selected_index=$(echo "$selected" | cut -d')' -f1)
+  selected_index=$(echo "$selected" | cut -d')' -f1 | tr -d '[:space:]')
   
   restore_session "$selected_index"
 }
