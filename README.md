@@ -18,11 +18,11 @@ BACKUP_DIR="$HOME/main/self/firefox-sessions-backups"
 
 1. make the script executable
 ```bash
-chmod +x firefox-session
+chmod +x foxes
 ```
 
 2. show available options
 ```bash 
-firefox-session *
+foxes *
 ```
 
